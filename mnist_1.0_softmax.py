@@ -49,24 +49,25 @@ W1 = tf.Variable(tf.truncated_normal([784, 200], stddev=0.1))
 B1 = tf.Variable(tf.zeros([200]))
 
 W2 = tf.Variable(tf.truncated_normal([200, 100], stddev=0.1))
-B2 = tf.Variable(tf.zeros([100]))
+B2 = tf.Variable(tf.ones([100])/10)
 W3 = tf.Variable(tf.truncated_normal([100, 60], stddev=0.1))
-B3 = tf.Variable(tf.zeros([60]))
+B3 = tf.Variable(tf.ones([60])/10)
 W4 = tf.Variable(tf.truncated_normal([60, 30], stddev=0.1))
-B4 = tf.Variable(tf.zeros([30]))
+B4 = tf.Variable(tf.ones([30])/10)
 W5 = tf.Variable(tf.truncated_normal([30, 10], stddev=0.1))
-B5 = tf.Variable(tf.zeros([10]))
+B5 = tf.Variable(tf.ones([10])/10)
 
 # flatten the images into a single line of pixels
 # -1 in the shape definition means "the only possible dimension that will preserve the number of elements"
 XX = tf.reshape(X, [-1, 28*28])
 
 # The model
-Y1 = tf.nn.sigmoid(tf.matmul(XX, W1) + B1)
-Y2 = tf.nn.sigmoid(tf.matmul(Y1, W2) + B2)
-Y3 = tf.nn.sigmoid(tf.matmul(Y2, W3) + B3)
-Y4 = tf.nn.sigmoid(tf.matmul(Y3, W4) + B4)
-Y = tf.nn.softmax(tf.matmul(Y4, W5) + B5)
+Y1 = tf.nn.relu(tf.matmul(XX, W1) + B1)
+Y2 = tf.nn.relu(tf.matmul(Y1, W2) + B2)
+Y3 = tf.nn.relu(tf.matmul(Y2, W3) + B3)
+Y4 = tf.nn.relu(tf.matmul(Y3, W4) + B4)
+Ylogits = tf.matmul(Y4, W5) + B5
+Y = tf.nn.softmax(Ylogits)
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
 #                           Y: the computed output vector
@@ -76,8 +77,10 @@ Y = tf.nn.softmax(tf.matmul(Y4, W5) + B5)
 # log takes the log of each element, * multiplies the tensors element by element
 # reduce_mean will add all the components in the tensor
 # so here we end up with the total cross-entropy for all images in the batch
-cross_entropy = -tf.reduce_mean(Y_ * tf.log(Y)) * 1000.0  # normalized for batches of 100 images,
-                                                          # *10 because  "mean" included an unwanted division by 10
+# normalized for batches of 100 images,
+# *10 because  "mean" included an unwanted division by 10
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=Ylogits, labels=Y_)
+cross_entropy = tf.reduce_mean(cross_entropy)*100
 
 # accuracy of the trained model, between 0 (worst) and 1 (best)
 correct_prediction = tf.equal(tf.argmax(Y, 1), tf.argmax(Y_, 1))
