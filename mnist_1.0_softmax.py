@@ -44,31 +44,63 @@ mnist = mnist_data.read_data_sets("data", one_hot=True, reshape=False, validatio
 X = tf.placeholder(tf.float32, [None, 28, 28, 1])
 # correct answers will go here
 Y_ = tf.placeholder(tf.float32, [None, 10])
-# weights W[784, 10]   784=28*28
-W1 = tf.Variable(tf.truncated_normal([784, 200], stddev=0.1))
-# biases b[10]
-B1 = tf.Variable(tf.zeros([200]))
 
-W2 = tf.Variable(tf.truncated_normal([200, 100], stddev=0.1))
-B2 = tf.Variable(tf.ones([100])/10)
-W3 = tf.Variable(tf.truncated_normal([100, 60], stddev=0.1))
-B3 = tf.Variable(tf.ones([60])/10)
-W4 = tf.Variable(tf.truncated_normal([60, 30], stddev=0.1))
-B4 = tf.Variable(tf.ones([30])/10)
-W5 = tf.Variable(tf.truncated_normal([30, 10], stddev=0.1))
-B5 = tf.Variable(tf.ones([10])/10)
+
+W1 = tf.Variable(tf.truncated_normal([5, 5, 1, 4], stddev=0.1))
+B1 = tf.Variable(tf.ones([4])/2)
+W2 = tf.Variable(tf.truncated_normal([4, 4, 4, 8], stddev=0.1))
+B2 = tf.Variable(tf.ones([8])/2)
+W3 = tf.Variable(tf.truncated_normal([4, 4, 8, 12], stddev=0.1))
+B3 = tf.Variable(tf.ones([12])/2)
+W4 = tf.Variable(tf.truncated_normal([7*7*12, 200], stddev=0.1))
+B4 = tf.Variable(tf.ones([200])/2)
+W5 = tf.Variable(tf.truncated_normal([200, 10], stddev=0.1))
+B5 = tf.Variable(tf.ones([10])/2)
+
+# Weights and biases for 5 layer regular neural net
+# W1 = tf.Variable(tf.truncated_normal([784, 200], stddev=0.1))
+# B1 = tf.Variable(tf.zeros([200]))
+# W2 = tf.Variable(tf.truncated_normal([200, 100], stddev=0.1))
+# B2 = tf.Variable(tf.ones([100])/10)
+# W3 = tf.Variable(tf.truncated_normal([100, 60], stddev=0.1))
+# B3 = tf.Variable(tf.ones([60])/10)
+# W4 = tf.Variable(tf.truncated_normal([60, 30], stddev=0.1))
+# B4 = tf.Variable(tf.ones([30])/10)
+# W5 = tf.Variable(tf.truncated_normal([30, 10], stddev=0.1))
+# B5 = tf.Variable(tf.ones([10])/10)
 
 # flatten the images into a single line of pixels
 # -1 in the shape definition means "the only possible dimension that will preserve the number of elements"
-XX = tf.reshape(X, [-1, 28*28])
+# XX = tf.reshape(X, [-1, 28*28])
 
-# The model
-Y1 = tf.nn.relu(tf.matmul(XX, W1) + B1)
-Y2 = tf.nn.relu(tf.matmul(Y1, W2) + B2)
-Y3 = tf.nn.relu(tf.matmul(Y2, W3) + B3)
-Y4 = tf.nn.relu(tf.matmul(Y3, W4) + B4)
+# Percentage to keep for dropout
+# pkeep = tf.placeholder(tf.float32)
+
+stride = 1
+Y1cnv = tf.nn.conv2d(X, W1, strides=[1, stride, stride, 1], padding="SAME")
+Y1 = tf.nn.relu(Y1cnv + B1)
+stride = 2
+Y2cnv = tf.nn.conv2d(Y1, W2, strides=[1, stride, stride, 1], padding="SAME")
+Y2 = tf.nn.relu(Y2cnv + B2)
+stride = 2
+Y3cnv = tf.nn.conv2d(Y2, W3, strides=[1, stride, stride, 1], padding="SAME")
+Y3 = tf.nn.relu(Y3cnv + B3)
+Y3prime = tf.reshape(Y3, [-1, 7*7*12])
+Y4 = tf.nn.relu(tf.matmul(Y3prime, W4) + B4)
 Ylogits = tf.matmul(Y4, W5) + B5
 Y = tf.nn.softmax(Ylogits)
+
+# Regular neural net layers
+# Y1 = tf.nn.relu(tf.matmul(XX, W1) + B1)
+# Y1d = tf.nn.dropout(Y1, pkeep)
+# Y2 = tf.nn.relu(tf.matmul(Y1d, W2) + B2)
+# Y2d = tf.nn.dropout(Y2, pkeep)
+# Y3 = tf.nn.relu(tf.matmul(Y2d, W3) + B3)
+# Y3d = tf.nn.dropout(Y3, pkeep)
+# Y4 = tf.nn.relu(tf.matmul(Y3d, W4) + B4)
+# Y4d = tf.nn.dropout(Y4, pkeep)
+# Ylogits = tf.matmul(Y4d, W5) + B5
+# Y = tf.nn.softmax(Ylogits)
 
 # loss function: cross-entropy = - sum( Y_i * log(Yi) )
 #                           Y: the computed output vector
