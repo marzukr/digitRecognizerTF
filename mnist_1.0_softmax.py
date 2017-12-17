@@ -46,16 +46,16 @@ X = tf.placeholder(tf.float32, [None, 28, 28, 1])
 Y_ = tf.placeholder(tf.float32, [None, 10])
 
 
-W1 = tf.Variable(tf.truncated_normal([5, 5, 1, 4], stddev=0.1))
-B1 = tf.Variable(tf.ones([4])/2)
-W2 = tf.Variable(tf.truncated_normal([4, 4, 4, 8], stddev=0.1))
-B2 = tf.Variable(tf.ones([8])/2)
-W3 = tf.Variable(tf.truncated_normal([4, 4, 8, 12], stddev=0.1))
-B3 = tf.Variable(tf.ones([12])/2)
-W4 = tf.Variable(tf.truncated_normal([7*7*12, 200], stddev=0.1))
-B4 = tf.Variable(tf.ones([200])/2)
+W1 = tf.Variable(tf.truncated_normal([6, 6, 1, 6], stddev=0.1))
+B1 = tf.Variable(tf.constant(0.1, tf.float32, [6]))
+W2 = tf.Variable(tf.truncated_normal([5, 5, 6, 12], stddev=0.1))
+B2 = tf.Variable(tf.constant(0.1, tf.float32, [12]))
+W3 = tf.Variable(tf.truncated_normal([4, 4, 12, 24], stddev=0.1))
+B3 = tf.Variable(tf.constant(0.1, tf.float32, [24]))
+W4 = tf.Variable(tf.truncated_normal([7*7*24, 200], stddev=0.1))
+B4 = tf.Variable(tf.constant(0.1, tf.float32, [200]))
 W5 = tf.Variable(tf.truncated_normal([200, 10], stddev=0.1))
-B5 = tf.Variable(tf.ones([10])/2)
+B5 = tf.Variable(tf.constant(0.1, tf.float32, [10]))
 
 # Weights and biases for 5 layer regular neural net
 # W1 = tf.Variable(tf.truncated_normal([784, 200], stddev=0.1))
@@ -74,7 +74,7 @@ B5 = tf.Variable(tf.ones([10])/2)
 # XX = tf.reshape(X, [-1, 28*28])
 
 # Percentage to keep for dropout
-# pkeep = tf.placeholder(tf.float32)
+pkeep = tf.placeholder(tf.float32)
 
 stride = 1
 Y1cnv = tf.nn.conv2d(X, W1, strides=[1, stride, stride, 1], padding="SAME")
@@ -85,9 +85,10 @@ Y2 = tf.nn.relu(Y2cnv + B2)
 stride = 2
 Y3cnv = tf.nn.conv2d(Y2, W3, strides=[1, stride, stride, 1], padding="SAME")
 Y3 = tf.nn.relu(Y3cnv + B3)
-Y3prime = tf.reshape(Y3, [-1, 7*7*12])
+Y3prime = tf.reshape(Y3, [-1, 7*7*24])
 Y4 = tf.nn.relu(tf.matmul(Y3prime, W4) + B4)
-Ylogits = tf.matmul(Y4, W5) + B5
+Y4d = tf.nn.dropout(Y4, pkeep)
+Ylogits = tf.matmul(Y4d, W5) + B5
 Y = tf.nn.softmax(Ylogits)
 
 # Regular neural net layers
@@ -145,7 +146,7 @@ def training_step(i, update_test_data, update_train_data):
 
     # compute training values for visualisation
     if update_train_data:
-        a, c, im, w, b = sess.run([accuracy, cross_entropy, I, allweights, allbiases], feed_dict={X: batch_X, Y_: batch_Y})
+        a, c, im, w, b = sess.run([accuracy, cross_entropy, I, allweights, allbiases], feed_dict={X: batch_X, Y_: batch_Y, pkeep: 1.0})
         datavis.append_training_curves_data(i, a, c)
         datavis.append_data_histograms(i, w, b)
         datavis.update_image1(im)
@@ -153,16 +154,16 @@ def training_step(i, update_test_data, update_train_data):
 
     # compute test values for visualisation
     if update_test_data:
-        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels})
+        a, c, im = sess.run([accuracy, cross_entropy, It], feed_dict={X: mnist.test.images, Y_: mnist.test.labels, pkeep: 1.0})
         datavis.append_test_curves_data(i, a, c)
         datavis.update_image2(im)
         print(str(i) + ": ********* epoch " + str(i*100//mnist.train.images.shape[0]+1) + " ********* test accuracy:" + str(a) + " test loss: " + str(c))
 
     # the backpropagation training step
-    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learningRate})
+    sess.run(train_step, feed_dict={X: batch_X, Y_: batch_Y, lr: learningRate, pkeep: 0.75})
 
 
-datavis.animate(training_step, iterations=10000+1, train_data_update_freq=20, test_data_update_freq=100, more_tests_at_start=True)
+datavis.animate(training_step, iterations=10000+1, train_data_update_freq=20, test_data_update_freq=100)
 
 # to save the animation as a movie, add save_movie=True as an argument to datavis.animate
 # to disable the visualisation use the following line instead of the datavis.animate line
